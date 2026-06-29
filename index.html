@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+    <!-- Primary Meta -->
+    <title>SoundAura Pro — Premium Wireless Headphones</title>
+    <meta name="description" content="Experience studio-quality sound with SoundAura Pro. Active noise cancellation, 40-hour battery life, and ultra-comfortable design for audiophiles on the go." />
+    <meta name="keywords" content="wireless headphones, noise cancelling, audiophile, SoundAura Pro, premium audio" />
+    <meta name="author" content="SoundAura" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://soundaura.pro/" />
+    <meta property="og:title" content="SoundAura Pro — Premium Wireless Headphones" />
+    <meta property="og:description" content="Experience studio-quality sound with SoundAura Pro. Active noise cancellation, 40-hour battery life, and ultra-comfortable design for audiophiles on the go." />
+    <meta property="og:image" content="https://soundaura.pro/og-image.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="SoundAura Pro wireless headphones" />
+    <meta property="og:site_name" content="SoundAura Pro" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@SoundAuraPro" />
+    <meta name="twitter:creator" content="@SoundAuraPro" />
+    <meta name="twitter:title" content="SoundAura Pro — Premium Wireless Headphones" />
+    <meta name="twitter:description" content="Experience studio-quality sound with SoundAura Pro. Active noise cancellation, 40-hour battery life, and ultra-comfortable design for audiophiles on the go." />
+    <meta name="twitter:image" content="https://soundaura.pro/og-image.jpg" />
+    <meta name="twitter:image:alt" content="SoundAura Pro wireless headphones" />
+    <!-- Prevent flash of wrong theme -->
+    <script>
+      (function () {
+        const stored = localStorage.getItem('theme')
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        if (stored === 'dark' || (!stored && prefersDark)) {
+          document.documentElement.classList.add('dark')
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

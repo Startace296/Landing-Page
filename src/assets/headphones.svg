@@ -1,0 +1,70 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none">
+  <!-- Glow background -->
+  <defs>
+    <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#a855f7" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c084fc"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+    <linearGradient id="cupGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background glow -->
+  <circle cx="60" cy="60" r="58" fill="url(#glowGrad)"/>
+
+  <!-- Headband arc -->
+  <path
+    d="M 22 62 C 22 35 98 35 98 62"
+    stroke="url(#arcGrad)"
+    stroke-width="7"
+    stroke-linecap="round"
+    fill="none"
+    filter="url(#glow)"
+  />
+
+  <!-- Headband highlight -->
+  <path
+    d="M 30 52 C 35 38 85 38 90 52"
+    stroke="#c084fc"
+    stroke-width="2"
+    stroke-linecap="round"
+    fill="none"
+    opacity="0.4"
+  />
+
+  <!-- Left ear cup outer -->
+  <rect x="12" y="58" width="22" height="32" rx="10" fill="url(#cupGrad)" filter="url(#glow)"/>
+  <!-- Left ear cup inner -->
+  <rect x="16" y="63" width="14" height="22" rx="7" fill="#1e1b4b" opacity="0.7"/>
+  <!-- Left driver dot -->
+  <circle cx="23" cy="74" r="4" fill="#a78bfa" opacity="0.9"/>
+  <!-- Left LED -->
+  <circle cx="23" cy="74" r="2" fill="#e9d5ff"/>
+
+  <!-- Right ear cup outer -->
+  <rect x="86" y="58" width="22" height="32" rx="10" fill="url(#cupGrad)" filter="url(#glow)"/>
+  <!-- Right ear cup inner -->
+  <rect x="90" y="63" width="14" height="22" rx="7" fill="#1e1b4b" opacity="0.7"/>
+  <!-- Right driver dot -->
+  <circle cx="97" cy="74" r="4" fill="#a78bfa" opacity="0.9"/>
+  <!-- Right LED -->
+  <circle cx="97" cy="74" r="2" fill="#e9d5ff"/>
+
+  <!-- Sound wave lines (left) -->
+  <path d="M 8 70 Q 5 74 8 78" stroke="#c084fc" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <path d="M 5 66 Q 0 74 5 82" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.4"/>
+
+  <!-- Sound wave lines (right) -->
+  <path d="M 112 70 Q 115 74 112 78" stroke="#c084fc" stroke-width="2" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <path d="M 115 66 Q 120 74 115 82" stroke="#818cf8" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.4"/>
+</svg>
