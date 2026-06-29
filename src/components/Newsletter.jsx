@@ -215,6 +215,7 @@ export default function Newsletter() {
                 <button
                   type="submit"
                   disabled={loading}
+                  data-track="newsletter-dang-ky"
                   className="mt-1 w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white text-purple-700 font-bold text-sm hover:bg-purple-50 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
                 >
                   {loading ? (
