@@ -35,7 +35,7 @@ export function CartProvider({ children }) {
 
     if (!currentUid) {
       if (prevUid) {
-        // Logout: xóa state, data vẫn an toàn trong Supabase
+        // Logout: xóa state, data vẫn trong Supabase
         setCartItems([])
         setWishlistItems([])
       }
@@ -44,7 +44,7 @@ export function CartProvider({ children }) {
 
     // Đăng nhập hoặc refresh trang khi đã login → tải lại từ Supabase
     loadFromSupabase(currentUid)
-  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user?.id]) 
 
   // ── Supabase load ──────────────────────────────────────────
 
@@ -70,8 +70,6 @@ export function CartProvider({ children }) {
   }
 
   // ── Cart ───────────────────────────────────────────────────
-  // Trả về: true = thành công | false = chưa login | 'error' = lỗi Supabase
-
   async function addToCart(product, qty = 1) {
     if (!user) return false
 
