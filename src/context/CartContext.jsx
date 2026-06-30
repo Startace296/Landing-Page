@@ -30,20 +30,23 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     const prevUid = prevUidRef.current
-    prevUidRef.current = user?.id ?? null
+    const currentUid = user?.id ?? null
+    prevUidRef.current = currentUid
 
-    if (!user?.id) {
+    if (!currentUid) {
       if (prevUid) {
-        // Logout: xóa state khỏi memory, data vẫn an toàn trong Supabase
+        // Logout: xóa state, data vẫn an toàn trong Supabase
         setCartItems([])
         setWishlistItems([])
       }
       return
     }
 
-    // Login: tải dữ liệu từ Supabase
-    loadFromSupabase(user.id)
+    // Đăng nhập hoặc refresh trang khi đã login → tải lại từ Supabase
+    loadFromSupabase(currentUid)
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Supabase load ──────────────────────────────────────────
 
   async function loadFromSupabase(uid) {
     const [{ data: cartRows, error: cartErr }, { data: wishRows, error: wishErr }] = await Promise.all([
@@ -51,8 +54,8 @@ export function CartProvider({ children }) {
       supabase.from('wishlist').select('product_id').eq('user_id', uid),
     ])
 
-    if (cartErr) console.warn('[Cart] load cart failed:', cartErr.message)
-    if (wishErr) console.warn('[Cart] load wishlist failed:', wishErr.message)
+    if (cartErr) console.error('[Cart] load cart error:', cartErr.message)
+    if (wishErr) console.error('[Cart] load wishlist error:', wishErr.message)
 
     setCartItems(
       (cartRows ?? [])
@@ -67,40 +70,47 @@ export function CartProvider({ children }) {
   }
 
   // ── Cart ───────────────────────────────────────────────────
-  // Trả về false nếu chưa login (để UI mở modal đăng nhập)
+  // Trả về: true = thành công | false = chưa login | 'error' = lỗi Supabase
 
   async function addToCart(product, qty = 1) {
     if (!user) return false
 
     const existing = cartItems.find(i => i.id === product.id)
     const newQty   = (existing?.quantity ?? 0) + qty
-    const next     = existing
-      ? cartItems.map(i => i.id === product.id ? { ...i, quantity: newQty } : i)
-      : [...cartItems, { ...product, quantity: qty }]
 
-    setCartItems(next)
-
+    // Ghi vào Supabase TRƯỚC, chỉ update state khi thành công
     const { error } = await supabase.from('cart').upsert(
       { user_id: user.id, product_id: product.id, quantity: newQty },
       { onConflict: 'user_id,product_id' }
     )
-    if (error) console.warn('[Cart] addToCart failed:', error.message)
+
+    if (error) {
+      console.error('[Cart] addToCart failed:', error.message, error)
+      return 'error'
+    }
+
+    setCartItems(prev => {
+      const exists = prev.find(i => i.id === product.id)
+      return exists
+        ? prev.map(i => i.id === product.id ? { ...i, quantity: newQty } : i)
+        : [...prev, { ...product, quantity: qty }]
+    })
     return true
   }
 
   async function removeFromCart(productId) {
     if (!user) return
-    setCartItems(prev => prev.filter(i => i.id !== productId))
     const { error } = await supabase.from('cart').delete().eq('user_id', user.id).eq('product_id', productId)
-    if (error) console.warn('[Cart] removeFromCart failed:', error.message)
+    if (error) { console.error('[Cart] removeFromCart failed:', error.message); return }
+    setCartItems(prev => prev.filter(i => i.id !== productId))
   }
 
   async function updateQuantity(productId, qty) {
     if (qty < 1) return removeFromCart(productId)
     if (!user) return
-    setCartItems(prev => prev.map(i => i.id === productId ? { ...i, quantity: qty } : i))
     const { error } = await supabase.from('cart').update({ quantity: qty }).eq('user_id', user.id).eq('product_id', productId)
-    if (error) console.warn('[Cart] updateQuantity failed:', error.message)
+    if (error) { console.error('[Cart] updateQuantity failed:', error.message); return }
+    setCartItems(prev => prev.map(i => i.id === productId ? { ...i, quantity: qty } : i))
   }
 
   // ── Wishlist ───────────────────────────────────────────────
@@ -109,22 +119,25 @@ export function CartProvider({ children }) {
     if (!user) return false
     if (wishlistItems.find(i => i.id === product.id)) return true
 
-    setWishlistItems(prev => [...prev, product])
-
     const { error } = await supabase.from('wishlist').insert(
       { user_id: user.id, product_id: product.id }
     )
-    if (error && error.code !== '23505') {
-      console.warn('[Cart] addToWishlist failed:', error.message)
+
+    if (error) {
+      if (error.code === '23505') return true // đã tồn tại
+      console.error('[Cart] addToWishlist failed:', error.message, error)
+      return 'error'
     }
+
+    setWishlistItems(prev => [...prev, product])
     return true
   }
 
   async function removeFromWishlist(productId) {
     if (!user) return
-    setWishlistItems(prev => prev.filter(i => i.id !== productId))
     const { error } = await supabase.from('wishlist').delete().eq('user_id', user.id).eq('product_id', productId)
-    if (error) console.warn('[Cart] removeFromWishlist failed:', error.message)
+    if (error) { console.error('[Cart] removeFromWishlist failed:', error.message); return }
+    setWishlistItems(prev => prev.filter(i => i.id !== productId))
   }
 
   // ── Recently viewed (không cần login) ─────────────────────

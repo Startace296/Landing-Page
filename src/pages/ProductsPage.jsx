@@ -47,9 +47,11 @@ export default function ProductsPage() {
     if (ok === false) {
       toast('Vui lòng đăng nhập để thêm vào giỏ hàng', { icon: '🔒', duration: 2500 })
       setModal('login')
-      return
+    } else if (ok === 'error') {
+      toast.error('Không thể lưu giỏ hàng. Vui lòng thử lại!', { duration: 3000 })
+    } else {
+      toast.success('Đã thêm vào giỏ hàng!', { icon: '🛒', duration: 2500 })
     }
-    toast.success('Đã thêm vào giỏ hàng!', { icon: '🛒', duration: 2500 })
   }
 
   async function handleToggleWishlist(product) {
@@ -62,9 +64,11 @@ export default function ProductsPage() {
       if (ok === false) {
         toast('Vui lòng đăng nhập để lưu yêu thích', { icon: '🔒', duration: 2500 })
         setModal('login')
-        return
+      } else if (ok === 'error') {
+        toast.error('Không thể lưu yêu thích. Vui lòng thử lại!', { duration: 3000 })
+      } else {
+        toast.success('Đã thêm vào yêu thích!', { duration: 2000 })
       }
-      toast.success('Đã thêm vào yêu thích!', { duration: 2000 })
     }
   }
 
