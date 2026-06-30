@@ -37,14 +37,22 @@ export function CartProvider({ children }) {
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadFromSupabase(uid) {
-    const [{ data: cartRows }, { data: wishRows }] = await Promise.all([
+    const [
+      { data: cartRows, error: cartErr },
+      { data: wishRows, error: wishErr },
+    ] = await Promise.all([
       supabase.from('cart').select('product_id, quantity').eq('user_id', uid),
       supabase.from('wishlist').select('product_id').eq('user_id', uid),
     ])
 
+    if (cartErr) console.error('[Cart] loadCart error:', cartErr.message, cartErr)
+    if (wishErr) console.error('[Cart] loadWishlist error:', wishErr.message, wishErr)
+
     setCartItems(
       (cartRows ?? [])
-        .map(r => PRODUCT_MAP[r.product_id] ? { ...PRODUCT_MAP[r.product_id], quantity: r.quantity } : null)
+        .map(r => PRODUCT_MAP[r.product_id]
+          ? { ...PRODUCT_MAP[r.product_id], quantity: r.quantity }
+          : null)
         .filter(Boolean)
     )
     setWishlistItems(
@@ -54,71 +62,92 @@ export function CartProvider({ children }) {
     )
   }
 
-  // ── Cart functions ─────────────────────────────────────────
+  // ── Cart ────────────────────────────────────────────────────
 
   async function addToCart(product, qty = 1) {
-    if (!user) {
-      setRequiresLogin(true)
-      return false
-    }
+    if (!user) { setRequiresLogin(true); return false }
+
     const existing = cartItems.find(i => i.id === product.id)
     const newQty   = (existing?.quantity ?? 0) + qty
     const next     = existing
       ? cartItems.map(i => i.id === product.id ? { ...i, quantity: newQty } : i)
       : [...cartItems, { ...product, quantity: qty }]
 
-    setCartItems(next)
-    await supabase.from('cart').upsert(
+    setCartItems(next) // optimistic
+
+    const { error } = await supabase.from('cart').upsert(
       { user_id: user.id, product_id: product.id, quantity: newQty },
       { onConflict: 'user_id,product_id' }
     )
+
+    if (error) {
+      console.error('[Cart] addToCart error:', error.message, error)
+      setCartItems(cartItems) // revert
+      return false
+    }
+    return true
   }
 
   async function removeFromCart(productId) {
     if (!user) return
-    const next = cartItems.filter(i => i.id !== productId)
-    setCartItems(next)
-    await supabase.from('cart').delete().eq('user_id', user.id).eq('product_id', productId)
+    const prev = cartItems
+    setCartItems(cartItems.filter(i => i.id !== productId))
+
+    const { error } = await supabase.from('cart').delete()
+      .eq('user_id', user.id).eq('product_id', productId)
+    if (error) { console.error('[Cart] removeFromCart error:', error.message); setCartItems(prev) }
   }
 
   async function updateQuantity(productId, qty) {
     if (qty < 1) return removeFromCart(productId)
     if (!user) return
-    const next = cartItems.map(i => i.id === productId ? { ...i, quantity: qty } : i)
-    setCartItems(next)
-    await supabase.from('cart').update({ quantity: qty }).eq('user_id', user.id).eq('product_id', productId)
+    const prev = cartItems
+    setCartItems(cartItems.map(i => i.id === productId ? { ...i, quantity: qty } : i))
+
+    const { error } = await supabase.from('cart').update({ quantity: qty })
+      .eq('user_id', user.id).eq('product_id', productId)
+    if (error) { console.error('[Cart] updateQuantity error:', error.message); setCartItems(prev) }
   }
 
-  // ── Wishlist functions ─────────────────────────────────────
+  // ── Wishlist ────────────────────────────────────────────────
 
   async function addToWishlist(product) {
-    if (!user) {
-      setRequiresLogin(true)
+    if (!user) { setRequiresLogin(true); return false }
+    if (wishlistItems.find(i => i.id === product.id)) return true
+
+    const prev = wishlistItems
+    setWishlistItems([...wishlistItems, product]) // optimistic
+
+    const { error } = await supabase.from('wishlist').insert(
+      { user_id: user.id, product_id: product.id }
+    )
+
+    if (error) {
+      if (error.code === '23505') return true // duplicate — đã tồn tại, OK
+      console.error('[Cart] addToWishlist error:', error.message, error)
+      setWishlistItems(prev)
       return false
     }
-    if (wishlistItems.find(i => i.id === product.id)) return
-    const next = [...wishlistItems, product]
-    setWishlistItems(next)
-    await supabase.from('wishlist').upsert(
-      { user_id: user.id, product_id: product.id },
-      { onConflict: 'user_id,product_id' }
-    )
+    return true
   }
 
   async function removeFromWishlist(productId) {
     if (!user) return
-    const next = wishlistItems.filter(i => i.id !== productId)
-    setWishlistItems(next)
-    await supabase.from('wishlist').delete().eq('user_id', user.id).eq('product_id', productId)
+    const prev = wishlistItems
+    setWishlistItems(wishlistItems.filter(i => i.id !== productId))
+
+    const { error } = await supabase.from('wishlist').delete()
+      .eq('user_id', user.id).eq('product_id', productId)
+    if (error) { console.error('[Cart] removeFromWishlist error:', error.message); setWishlistItems(prev) }
   }
 
-  // ── Recently viewed ────────────────────────────────────────
+  // ── Recently viewed ─────────────────────────────────────────
 
   function addToRecentlyViewed(product) {
-    setRecentlyViewed(prev => [product, ...prev.filter(i => i.id !== product.id)].slice(0, 10))
+    setRecentlyViewed(prev =>
+      [product, ...prev.filter(i => i.id !== product.id)].slice(0, 10)
+    )
   }
-
-  // ── Derived ────────────────────────────────────────────────
 
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0)
   const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)
