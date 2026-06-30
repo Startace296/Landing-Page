@@ -1,18 +1,38 @@
 import { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../context/AuthContext'
 import LoginModal from './Auth/LoginModal'
 import RegisterModal from './Auth/RegisterModal'
 
 const NAV_LINKS = [
-  { label: 'Features',   href: '/#features' },
-  { label: 'Specs',      href: '/#specs' },
-  { label: 'Newsletter', href: '/#newsletter' },
+  { label: 'Features',   hash: 'features' },
+  { label: 'Specs',      hash: 'specs' },
+  { label: 'Newsletter', hash: 'newsletter' },
 ]
+
+function useNavToSection() {
+  const navigate  = useNavigate()
+  const location  = useLocation()
+
+  return function navTo(hash) {
+    if (location.pathname === '/') {
+      // Already on landing page — just scroll
+      document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' })
+    } else {
+      // On another page (e.g. /products) — client-side navigate then scroll
+      navigate('/')
+      // Wait for LandingPage to mount before scrolling
+      setTimeout(() => {
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' })
+      }, 80)
+    }
+  }
+}
 
 export default function Navbar({ cartCount = 0, onCartOpen, onWishlistOpen }) {
   const { user, loading, signOut } = useAuth()
+  const navTo = useNavToSection()
   const [modal, setModal] = useState(null) // null | 'login' | 'register'
 
   const [isDark, setIsDark] = useState(
@@ -63,14 +83,14 @@ export default function Navbar({ cartCount = 0, onCartOpen, onWishlistOpen }) {
 
         {/* Desktop links */}
         <ul className="hidden md:flex items-center gap-8">
-          {NAV_LINKS.map(({ label, href }) => (
+          {NAV_LINKS.map(({ label, hash }) => (
             <li key={label}>
-              <a
-                href={href}
+              <button
+                onClick={() => navTo(hash)}
                 className="text-sm font-medium text-gray-600 hover:text-purple-500 dark:text-gray-300 dark:hover:text-purple-400 transition-colors duration-200"
               >
                 {label}
-              </a>
+              </button>
             </li>
           ))}
           <li>
@@ -168,15 +188,14 @@ export default function Navbar({ cartCount = 0, onCartOpen, onWishlistOpen }) {
             className="md:hidden overflow-hidden bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800"
           >
             <ul className="px-4 py-3 flex flex-col gap-1">
-              {NAV_LINKS.map(({ label, href }) => (
+              {NAV_LINKS.map(({ label, hash }) => (
                 <li key={label}>
-                  <a
-                    href={href}
-                    onClick={() => setMenuOpen(false)}
-                    className="flex items-center py-2.5 px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-gray-800 hover:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200"
+                  <button
+                    onClick={() => { navTo(hash); setMenuOpen(false) }}
+                    className="w-full flex items-center py-2.5 px-3 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-purple-50 dark:hover:bg-gray-800 hover:text-purple-500 dark:hover:text-purple-400 transition-colors duration-200"
                   >
                     {label}
-                  </a>
+                  </button>
                 </li>
               ))}
               <li>
