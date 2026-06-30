@@ -62,6 +62,7 @@ export default function Hero() {
           <motion.div {...fadeUp(0.3)} className="flex flex-wrap gap-3 pt-2">
             <a
               href="#newsletter"
+              data-track="hero-mua-ngay"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-semibold text-sm transition-all duration-200 shadow-lg shadow-purple-500/30"
             >
               Mua ngay
@@ -69,6 +70,7 @@ export default function Hero() {
             </a>
             <a
               href="#features"
+              data-track="hero-tim-hieu-them"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-500 text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 font-semibold text-sm bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm active:scale-95 transition-all duration-200"
             >
               Tìm hiểu thêm

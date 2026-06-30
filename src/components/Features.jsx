@@ -113,7 +113,7 @@ export default function Features() {
           initial={{ opacity: 0, y: 24 }}
           animate={headingInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="text-center mb-14"
+          className="flex flex-col items-center text-center mb-14"
         >
           <span className="inline-block mb-3 text-xs font-semibold tracking-widest uppercase text-purple-500 dark:text-purple-400">
             Vì sao chọn SoundAura Pro
@@ -124,7 +124,7 @@ export default function Features() {
               Nổi Bật
             </span>
           </h2>
-          <p className="mt-4 text-gray-500 dark:text-gray-400 max-w-xl mx-auto text-base text-center">
+          <p className="mt-4 text-gray-500 dark:text-gray-400 max-w-2xl text-base text-center">
             Mỗi chi tiết được thiết kế để nâng tầm trải nghiệm nghe nhạc của bạn lên một đẳng cấp hoàn toàn mới.
           </p>
         </motion.div>

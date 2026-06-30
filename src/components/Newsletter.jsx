@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useForm } from 'react-hook-form'
 import { motion, useInView, AnimatePresence } from 'framer-motion'
+import { supabase } from '../lib/supabase'
 
 // Thay bằng webhook URL thật của Make.com
 const WEBHOOK_URL = 'https://hook.eu1.make.com/y6okfu25lewpy143yw56xql05axyt4du'
@@ -75,18 +76,30 @@ export default function Newsletter() {
   async function onSubmit(data) {
     setLoading(true)
     try {
-      // application/x-www-form-urlencoded: simple request (no CORS preflight),
-      // Make.com parse đúng thành field name/email riêng biệt
-      await fetch(WEBHOOK_URL, {
+      // 1. Insert vào Supabase — unique constraint tự bắt email trùng
+      const { error } = await supabase
+        .from('newsletter')
+        .insert({ email: data.email, name: data.name })
+
+      if (error) {
+        if (error.code === '23505') {
+          showToast('error', 'Email đã tồn tại', 'Email này đã được đăng ký trước đó rồi.')
+        } else {
+          showToast('error', 'Đã xảy ra lỗi', 'Không thể đăng ký. Vui lòng thử lại sau.')
+        }
+        return
+      }
+
+      // 2. Fire-and-forget Make.com webhook (data đã lưu Supabase nên không block)
+      fetch(WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ name: data.name, email: data.email }),
-      })
+      }).catch(() => {})
 
-      // Make.com trả "Accepted" dạng text — không check res.ok vì no-cors mode
       showToast(
         'success',
-        'Đăng ký thành công! 🎉',
+        'Đăng ký thành công!',
         'Chúng tôi sẽ gửi ưu đãi độc quyền đến email của bạn sớm nhất.'
       )
       reset()
@@ -215,6 +228,7 @@ export default function Newsletter() {
                 <button
                   type="submit"
                   disabled={loading}
+                  data-track="newsletter-dang-ky"
                   className="mt-1 w-full flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-white text-purple-700 font-bold text-sm hover:bg-purple-50 active:scale-[0.98] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 shadow-lg"
                 >
                   {loading ? (
