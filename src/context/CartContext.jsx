@@ -3,10 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 import { PRODUCT_MAP } from '../data/products'
 
-// ── localStorage helpers ────────────────────────────────────
-const CART_KEY     = 'sa_cart'
-const WISHLIST_KEY = 'sa_wishlist'
-const RECENT_KEY   = 'sa_recently'
+const RECENT_KEY = 'sa_recently'
 
 function lsGet(key, fallback = []) {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback }
@@ -17,7 +14,6 @@ function lsSet(key, value) {
   catch { /* quota exceeded – silently ignore */ }
 }
 
-// ── Context ─────────────────────────────────────────────────
 const CartContext = createContext(null)
 
 export function CartProvider({ children }) {
@@ -25,24 +21,20 @@ export function CartProvider({ children }) {
   const [cartItems,      setCartItems]      = useState([])
   const [wishlistItems,  setWishlistItems]  = useState([])
   const [recentlyViewed, setRecentlyViewed] = useState(() => lsGet(RECENT_KEY))
+  const [requiresLogin,  setRequiresLogin]  = useState(false)
 
-  // Persist recentlyViewed to localStorage (always local)
   useEffect(() => {
     lsSet(RECENT_KEY, recentlyViewed.slice(0, 10))
   }, [recentlyViewed])
 
-  // Sync on auth change (user?.id goes undefined → uuid on login, uuid → undefined on logout)
   useEffect(() => {
     if (!user?.id) {
-      setCartItems(lsGet(CART_KEY))
-      setWishlistItems(lsGet(WISHLIST_KEY))
+      setCartItems([])
+      setWishlistItems([])
       return
     }
-    // Logged in: merge localStorage → Supabase, then load fresh data
-    syncOnLogin(user.id)
+    loadFromSupabase(user.id)
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Supabase helpers ───────────────────────────────────────
 
   async function loadFromSupabase(uid) {
     const [{ data: cartRows }, { data: wishRows }] = await Promise.all([
@@ -62,38 +54,13 @@ export function CartProvider({ children }) {
     )
   }
 
-  async function syncOnLogin(uid) {
-    const localCart     = lsGet(CART_KEY)
-    const localWishlist = lsGet(WISHLIST_KEY)
-
-    const merges = []
-
-    if (localCart.length > 0) {
-      merges.push(
-        supabase.from('cart').upsert(
-          localCart.map(i => ({ user_id: uid, product_id: i.id, quantity: i.quantity })),
-          { onConflict: 'user_id,product_id' }
-        )
-      )
-      localStorage.removeItem(CART_KEY)
-    }
-    if (localWishlist.length > 0) {
-      merges.push(
-        supabase.from('wishlist').upsert(
-          localWishlist.map(i => ({ user_id: uid, product_id: i.id })),
-          { onConflict: 'user_id,product_id' }
-        )
-      )
-      localStorage.removeItem(WISHLIST_KEY)
-    }
-
-    await Promise.all(merges)
-    await loadFromSupabase(uid)
-  }
-
   // ── Cart functions ─────────────────────────────────────────
 
   async function addToCart(product, qty = 1) {
+    if (!user) {
+      setRequiresLogin(true)
+      return
+    }
     const existing = cartItems.find(i => i.id === product.id)
     const newQty   = (existing?.quantity ?? 0) + qty
     const next     = existing
@@ -101,62 +68,48 @@ export function CartProvider({ children }) {
       : [...cartItems, { ...product, quantity: qty }]
 
     setCartItems(next)
-
-    if (user) {
-      await supabase.from('cart').upsert(
-        { user_id: user.id, product_id: product.id, quantity: newQty },
-        { onConflict: 'user_id,product_id' }
-      )
-    } else {
-      lsSet(CART_KEY, next)
-    }
+    await supabase.from('cart').upsert(
+      { user_id: user.id, product_id: product.id, quantity: newQty },
+      { onConflict: 'user_id,product_id' }
+    )
   }
 
   async function removeFromCart(productId) {
+    if (!user) return
     const next = cartItems.filter(i => i.id !== productId)
     setCartItems(next)
-    if (user) {
-      await supabase.from('cart').delete().eq('user_id', user.id).eq('product_id', productId)
-    } else {
-      lsSet(CART_KEY, next)
-    }
+    await supabase.from('cart').delete().eq('user_id', user.id).eq('product_id', productId)
   }
 
   async function updateQuantity(productId, qty) {
     if (qty < 1) return removeFromCart(productId)
+    if (!user) return
     const next = cartItems.map(i => i.id === productId ? { ...i, quantity: qty } : i)
     setCartItems(next)
-    if (user) {
-      await supabase.from('cart').update({ quantity: qty }).eq('user_id', user.id).eq('product_id', productId)
-    } else {
-      lsSet(CART_KEY, next)
-    }
+    await supabase.from('cart').update({ quantity: qty }).eq('user_id', user.id).eq('product_id', productId)
   }
 
   // ── Wishlist functions ─────────────────────────────────────
 
   async function addToWishlist(product) {
+    if (!user) {
+      setRequiresLogin(true)
+      return
+    }
     if (wishlistItems.find(i => i.id === product.id)) return
     const next = [...wishlistItems, product]
     setWishlistItems(next)
-    if (user) {
-      await supabase.from('wishlist').upsert(
-        { user_id: user.id, product_id: product.id },
-        { onConflict: 'user_id,product_id' }
-      )
-    } else {
-      lsSet(WISHLIST_KEY, next)
-    }
+    await supabase.from('wishlist').upsert(
+      { user_id: user.id, product_id: product.id },
+      { onConflict: 'user_id,product_id' }
+    )
   }
 
   async function removeFromWishlist(productId) {
+    if (!user) return
     const next = wishlistItems.filter(i => i.id !== productId)
     setWishlistItems(next)
-    if (user) {
-      await supabase.from('wishlist').delete().eq('user_id', user.id).eq('product_id', productId)
-    } else {
-      lsSet(WISHLIST_KEY, next)
-    }
+    await supabase.from('wishlist').delete().eq('user_id', user.id).eq('product_id', productId)
   }
 
   // ── Recently viewed ────────────────────────────────────────
@@ -177,6 +130,8 @@ export function CartProvider({ children }) {
       addToCart, removeFromCart, updateQuantity,
       addToWishlist, removeFromWishlist,
       addToRecentlyViewed,
+      requiresLogin,
+      clearRequiresLogin: () => setRequiresLogin(false),
     }}>
       {children}
     </CartContext.Provider>
