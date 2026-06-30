@@ -54,15 +54,6 @@ export function AuthProvider({ children }) {
       password,
     })
     if (error) throw error
-
-    // Đảm bảo profile tồn tại (FK constraint cho cart/wishlist)
-    if (data.user) {
-      await supabase.from('profiles').upsert({
-        id: data.user.id,
-        full_name: data.user.user_metadata?.full_name ?? '',
-      }, { onConflict: 'id' })
-    }
-
     return data
   }
 

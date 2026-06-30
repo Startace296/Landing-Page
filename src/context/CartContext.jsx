@@ -1,8 +1,9 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './AuthContext'
 import { PRODUCT_MAP } from '../data/products'
 
+// ── localStorage helpers ────────────────────────────────────
 const CART_KEY     = 'sa_cart'
 const WISHLIST_KEY = 'sa_wishlist'
 const RECENT_KEY   = 'sa_recently'
@@ -13,9 +14,10 @@ function lsGet(key, fallback = []) {
 }
 function lsSet(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)) }
-  catch {}
+  catch { /* quota exceeded – silently ignore */ }
 }
 
+// ── Context ─────────────────────────────────────────────────
 const CartContext = createContext(null)
 
 export function CartProvider({ children }) {
@@ -24,43 +26,29 @@ export function CartProvider({ children }) {
   const [wishlistItems,  setWishlistItems]  = useState([])
   const [recentlyViewed, setRecentlyViewed] = useState(() => lsGet(RECENT_KEY))
 
-  const prevUidRef = useRef(null)
-
+  // Persist recentlyViewed to localStorage (always local)
   useEffect(() => {
     lsSet(RECENT_KEY, recentlyViewed.slice(0, 10))
   }, [recentlyViewed])
 
+  // Sync on auth change (user?.id goes undefined → uuid on login, uuid → undefined on logout)
   useEffect(() => {
-    const prevUid    = prevUidRef.current
-    const currentUid = user?.id ?? null
-    prevUidRef.current = currentUid
-
-    if (!currentUid) {
-      if (prevUid) {
-        // Logout → persist in-memory items to localStorage for guest session
-        setCartItems(prev => { lsSet(CART_KEY, prev); return [] })
-        setWishlistItems(prev => { lsSet(WISHLIST_KEY, prev); return [] })
-      } else {
-        // Initial mount, no user → load from localStorage
-        setCartItems(lsGet(CART_KEY))
-        setWishlistItems(lsGet(WISHLIST_KEY))
-      }
+    if (!user?.id) {
+      setCartItems(lsGet(CART_KEY))
+      setWishlistItems(lsGet(WISHLIST_KEY))
       return
     }
-
-    // Logged in → merge any guest localStorage items into Supabase, then reload
-    syncOnLogin(currentUid)
+    // Logged in: merge localStorage → Supabase, then load fresh data
+    syncOnLogin(user.id)
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Supabase helpers ────────────────────────────────────────
+  // ── Supabase helpers ───────────────────────────────────────
 
   async function loadFromSupabase(uid) {
-    const [{ data: cartRows, error: cErr }, { data: wishRows, error: wErr }] = await Promise.all([
+    const [{ data: cartRows }, { data: wishRows }] = await Promise.all([
       supabase.from('cart').select('product_id, quantity').eq('user_id', uid),
       supabase.from('wishlist').select('product_id').eq('user_id', uid),
     ])
-    if (cErr) console.error('[Cart] load failed:', cErr.message)
-    if (wErr) console.error('[Wishlist] load failed:', wErr.message)
 
     setCartItems(
       (cartRows ?? [])
@@ -78,42 +66,32 @@ export function CartProvider({ children }) {
     const localCart     = lsGet(CART_KEY)
     const localWishlist = lsGet(WISHLIST_KEY)
 
-    try {
-      const merges = []
-      if (localCart.length > 0) {
-        merges.push(
-          supabase.from('cart').upsert(
-            localCart.map(i => ({ user_id: uid, product_id: i.id, quantity: i.quantity ?? 1 })),
-            { onConflict: 'user_id,product_id' }
-          )
-        )
-      }
-      if (localWishlist.length > 0) {
-        merges.push(
-          supabase.from('wishlist').upsert(
-            localWishlist.map(i => ({ user_id: uid, product_id: i.id })),
-            { onConflict: 'user_id,product_id' }
-          )
-        )
-      }
+    const merges = []
 
-      const results = await Promise.all(merges)
-      const failed  = results.find(r => r.error)
-      if (failed) {
-        console.error('[Cart] syncOnLogin failed:', failed.error.message)
-      } else {
-        // Only clear localStorage after confirmed Supabase write
-        if (localCart.length > 0)     localStorage.removeItem(CART_KEY)
-        if (localWishlist.length > 0) localStorage.removeItem(WISHLIST_KEY)
-      }
-    } catch (err) {
-      console.error('[Cart] syncOnLogin error:', err)
+    if (localCart.length > 0) {
+      merges.push(
+        supabase.from('cart').upsert(
+          localCart.map(i => ({ user_id: uid, product_id: i.id, quantity: i.quantity })),
+          { onConflict: 'user_id,product_id' }
+        )
+      )
+      localStorage.removeItem(CART_KEY)
+    }
+    if (localWishlist.length > 0) {
+      merges.push(
+        supabase.from('wishlist').upsert(
+          localWishlist.map(i => ({ user_id: uid, product_id: i.id })),
+          { onConflict: 'user_id,product_id' }
+        )
+      )
+      localStorage.removeItem(WISHLIST_KEY)
     }
 
+    await Promise.all(merges)
     await loadFromSupabase(uid)
   }
 
-  // ── Cart ────────────────────────────────────────────────────
+  // ── Cart functions ─────────────────────────────────────────
 
   async function addToCart(product, qty = 1) {
     const existing = cartItems.find(i => i.id === product.id)
@@ -122,38 +100,23 @@ export function CartProvider({ children }) {
       ? cartItems.map(i => i.id === product.id ? { ...i, quantity: newQty } : i)
       : [...cartItems, { ...product, quantity: qty }]
 
-    // Optimistic update — always update state immediately
     setCartItems(next)
 
     if (user) {
-      const { error } = await supabase.from('cart').upsert(
+      await supabase.from('cart').upsert(
         { user_id: user.id, product_id: product.id, quantity: newQty },
         { onConflict: 'user_id,product_id' }
       )
-      if (error) {
-        console.error('[Cart] addToCart Supabase failed:', error.message, error)
-        // Revert optimistic update on failure
-        setCartItems(cartItems)
-        return false
-      }
     } else {
-      // Guest: persist to localStorage
       lsSet(CART_KEY, next)
     }
-    return true
   }
 
   async function removeFromCart(productId) {
     const next = cartItems.filter(i => i.id !== productId)
     setCartItems(next)
-
     if (user) {
-      const { error } = await supabase.from('cart').delete()
-        .eq('user_id', user.id).eq('product_id', productId)
-      if (error) {
-        console.error('[Cart] removeFromCart failed:', error.message)
-        setCartItems(cartItems) // revert
-      }
+      await supabase.from('cart').delete().eq('user_id', user.id).eq('product_id', productId)
     } else {
       lsSet(CART_KEY, next)
     }
@@ -163,65 +126,46 @@ export function CartProvider({ children }) {
     if (qty < 1) return removeFromCart(productId)
     const next = cartItems.map(i => i.id === productId ? { ...i, quantity: qty } : i)
     setCartItems(next)
-
     if (user) {
-      const { error } = await supabase.from('cart').update({ quantity: qty })
-        .eq('user_id', user.id).eq('product_id', productId)
-      if (error) {
-        console.error('[Cart] updateQuantity failed:', error.message)
-        setCartItems(cartItems) // revert
-      }
+      await supabase.from('cart').update({ quantity: qty }).eq('user_id', user.id).eq('product_id', productId)
     } else {
       lsSet(CART_KEY, next)
     }
   }
 
-  // ── Wishlist ────────────────────────────────────────────────
+  // ── Wishlist functions ─────────────────────────────────────
 
   async function addToWishlist(product) {
-    if (wishlistItems.find(i => i.id === product.id)) return true
+    if (wishlistItems.find(i => i.id === product.id)) return
     const next = [...wishlistItems, product]
-    setWishlistItems(next) // optimistic
-
+    setWishlistItems(next)
     if (user) {
-      const { error } = await supabase.from('wishlist').insert(
-        { user_id: user.id, product_id: product.id }
+      await supabase.from('wishlist').upsert(
+        { user_id: user.id, product_id: product.id },
+        { onConflict: 'user_id,product_id' }
       )
-      if (error) {
-        if (error.code === '23505') return true // duplicate, already exists — OK
-        console.error('[Wishlist] addToWishlist failed:', error.message, error)
-        setWishlistItems(wishlistItems) // revert
-        return false
-      }
     } else {
       lsSet(WISHLIST_KEY, next)
     }
-    return true
   }
 
   async function removeFromWishlist(productId) {
     const next = wishlistItems.filter(i => i.id !== productId)
     setWishlistItems(next)
-
     if (user) {
-      const { error } = await supabase.from('wishlist').delete()
-        .eq('user_id', user.id).eq('product_id', productId)
-      if (error) {
-        console.error('[Wishlist] removeFromWishlist failed:', error.message)
-        setWishlistItems(wishlistItems) // revert
-      }
+      await supabase.from('wishlist').delete().eq('user_id', user.id).eq('product_id', productId)
     } else {
       lsSet(WISHLIST_KEY, next)
     }
   }
 
-  // ── Recently viewed (always localStorage) ──────────────────
+  // ── Recently viewed ────────────────────────────────────────
 
   function addToRecentlyViewed(product) {
-    setRecentlyViewed(prev =>
-      [product, ...prev.filter(i => i.id !== product.id)].slice(0, 10)
-    )
+    setRecentlyViewed(prev => [product, ...prev.filter(i => i.id !== product.id)].slice(0, 10))
   }
+
+  // ── Derived ────────────────────────────────────────────────
 
   const cartCount = cartItems.reduce((sum, i) => sum + i.quantity, 0)
   const cartTotal = cartItems.reduce((sum, i) => sum + i.price * i.quantity, 0)

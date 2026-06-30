@@ -4,8 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import products from '../data/products'
 import { useCart } from '../context/CartContext'
-import LoginModal from '../components/Auth/LoginModal'
-import RegisterModal from '../components/Auth/RegisterModal'
 
 const CATEGORIES = [
   { key: 'all',         label: 'Tất cả' },
@@ -35,40 +33,25 @@ const cardVariants = {
 
 export default function ProductsPage() {
   const [activeCategory, setActiveCategory] = useState('all')
-  const [modal, setModal] = useState(null) // null | 'login' | 'register'
   const { addToCart, addToWishlist, removeFromWishlist, wishlistItems } = useCart()
 
   const filtered = activeCategory === 'all'
     ? products
     : products.filter(p => p.category === activeCategory)
 
-  async function handleAddToCart(product) {
-    const ok = await addToCart(product, 1)
-    if (ok === false) {
-      toast('Vui lòng đăng nhập để thêm vào giỏ hàng', { icon: '🔒', duration: 2500 })
-      setModal('login')
-    } else if (ok === 'error') {
-      toast.error('Không thể lưu giỏ hàng. Vui lòng thử lại!', { duration: 3000 })
-    } else {
-      toast.success('Đã thêm vào giỏ hàng!', { icon: '🛒', duration: 2500 })
-    }
+  function handleAddToCart(product) {
+    addToCart(product, 1)
+    toast.success('Đã thêm vào giỏ hàng!', { icon: '🛒', duration: 2500 })
   }
 
-  async function handleToggleWishlist(product) {
+  function handleToggleWishlist(product) {
     const saved = wishlistItems.some(i => i.id === product.id)
     if (saved) {
       removeFromWishlist(product.id)
       toast('Đã xóa khỏi yêu thích', { icon: '💔', duration: 2000 })
     } else {
-      const ok = await addToWishlist(product)
-      if (ok === false) {
-        toast('Vui lòng đăng nhập để lưu yêu thích', { icon: '🔒', duration: 2500 })
-        setModal('login')
-      } else if (ok === 'error') {
-        toast.error('Không thể lưu yêu thích. Vui lòng thử lại!', { duration: 3000 })
-      } else {
-        toast.success('Đã thêm vào yêu thích!', { duration: 2000 })
-      }
+      addToWishlist(product)
+      toast.success('Đã thêm vào yêu thích!', { duration: 2000 })
     }
   }
 
@@ -221,17 +204,6 @@ export default function ProductsPage() {
           </div>
         )}
       </div>
-
-      <LoginModal
-        isOpen={modal === 'login'}
-        onClose={() => setModal(null)}
-        onSwitchToRegister={() => setModal('register')}
-      />
-      <RegisterModal
-        isOpen={modal === 'register'}
-        onClose={() => setModal(null)}
-        onSwitchToLogin={() => setModal('login')}
-      />
     </div>
   )
 }

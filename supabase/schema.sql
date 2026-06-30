@@ -110,19 +110,10 @@ create policy "Thêm vào giỏ hàng"
   on public.cart for insert
   with check (auth.uid() = user_id);
 
--- with check bắt buộc để upsert hoạt động đúng
 create policy "Cập nhật giỏ hàng của mình"
   on public.cart for update
-  using (auth.uid() = user_id)
-  with check (auth.uid() = user_id);
+  using (auth.uid() = user_id);
 
 create policy "Xóa khỏi giỏ hàng"
   on public.cart for delete
   using (auth.uid() = user_id);
-
--- ── wishlist ─────────────────────────────────────────────────
--- (policy đã khai báo phía trên, phần này là ghi chú fix upsert)
--- Nếu bị lỗi policy trùng, chạy:
--- drop policy "Xem wishlist của mình" on public.wishlist;
--- drop policy "Thêm vào wishlist" on public.wishlist;
--- drop policy "Xóa khỏi wishlist" on public.wishlist;
