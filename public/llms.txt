@@ -1,0 +1,21 @@
+# SoundAura Pro
+
+> SoundAura Pro là cửa hàng âm thanh trực tuyến chuyên cung cấp tai nghe, earbuds, loa Bluetooth và phụ kiện âm thanh cao cấp tại Việt Nam.
+
+SoundAura Pro mang đến trải nghiệm âm nhạc đỉnh cao với các dòng sản phẩm từ phổ thông đến flagship, bao gồm công nghệ ANC thế hệ mới, Spatial Audio 360° và Hi-Res Audio.
+
+## Trang chính
+
+- [Trang chủ](https://soundaura-pro.vercel.app/): Giới thiệu thương hiệu, sản phẩm nổi bật và ưu đãi mới nhất.
+- [Sản phẩm](https://soundaura-pro.vercel.app/products): Danh mục đầy đủ tai nghe over-ear, earbuds TWS, loa Bluetooth và phụ kiện âm thanh.
+
+## Danh mục sản phẩm
+
+- [Tai nghe Over-Ear](https://soundaura-pro.vercel.app/products): SoundAura Pro Gen 2, SoundAura Lite, SoundAura Studio Pro — dòng tai nghe chụp tai flagship và tầm trung.
+- [Earbuds TWS](https://soundaura-pro.vercel.app/products): SoundAura Buds Pro, SoundAura Buds Lite, SoundAura Neckband N1 — true wireless và neckband thể thao.
+- [Loa Bluetooth](https://soundaura-pro.vercel.app/products): SoundAura Speaker Mini (20W) và Speaker Max (60W) — loa di động chống nước IP67.
+- [Phụ kiện](https://soundaura-pro.vercel.app/products): SoundAura Amp X1 (DAC/Amp Hi-Res) và Cable Pro (cáp OFC mạ vàng 24K).
+
+## Thông tin thương hiệu
+
+SoundAura Pro cung cấp sản phẩm âm thanh chính hãng với chính sách bảo hành rõ ràng, hỗ trợ thanh toán đa dạng và giao hàng toàn quốc. Chatbot AI tích hợp hỗ trợ tư vấn sản phẩm 24/7.
