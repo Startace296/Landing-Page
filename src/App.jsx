@@ -1,25 +1,44 @@
+import { useState } from 'react'
+import { Routes, Route } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast'
 import Navbar from './components/Navbar'
-import Hero from './components/Hero'
-import Features from './components/Features'
-import Specs from './components/Specs'
-import Newsletter from './components/Newsletter'
 import Chatbot from './components/Chatbot'
+import Cart from './components/Cart'
+import Wishlist from './components/Wishlist'
+import LandingPage from './pages/LandingPage'
+import ProductsPage from './pages/ProductsPage'
 import { useScrollTracker } from './hooks/useScrollTracker'
+import { useCart } from './context/CartContext'
 import './App.css'
 
 function App() {
   useScrollTracker()
+  const { cartCount } = useCart()
+  const [cartOpen,     setCartOpen]     = useState(false)
+  const [wishlistOpen, setWishlistOpen] = useState(false)
 
   return (
     <>
-      <Navbar />
-      <main>
-        <Hero />
-        <Features />
-        <Specs />
-        <Newsletter />
-      </main>
+      <Toaster position="bottom-right" toastOptions={{ duration: 4000 }} />
+      <Navbar
+        cartCount={cartCount}
+        onCartOpen={() => setCartOpen(true)}
+        onWishlistOpen={() => setWishlistOpen(true)}
+      />
+      <Routes>
+        <Route path="/"         element={<LandingPage />} />
+        <Route path="/products" element={<ProductsPage />} />
+      </Routes>
       <Chatbot />
+      <Cart
+        isOpen={cartOpen}
+        onClose={() => setCartOpen(false)}
+      />
+      <Wishlist
+        isOpen={wishlistOpen}
+        onClose={() => setWishlistOpen(false)}
+        onOpenCart={() => setCartOpen(true)}
+      />
     </>
   )
 }
