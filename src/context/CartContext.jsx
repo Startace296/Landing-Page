@@ -59,7 +59,7 @@ export function CartProvider({ children }) {
   async function addToCart(product, qty = 1) {
     if (!user) {
       setRequiresLogin(true)
-      return
+      return false
     }
     const existing = cartItems.find(i => i.id === product.id)
     const newQty   = (existing?.quantity ?? 0) + qty
@@ -94,7 +94,7 @@ export function CartProvider({ children }) {
   async function addToWishlist(product) {
     if (!user) {
       setRequiresLogin(true)
-      return
+      return false
     }
     if (wishlistItems.find(i => i.id === product.id)) return
     const next = [...wishlistItems, product]

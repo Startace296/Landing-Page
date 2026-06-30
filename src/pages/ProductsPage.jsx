@@ -39,19 +39,19 @@ export default function ProductsPage() {
     ? products
     : products.filter(p => p.category === activeCategory)
 
-  function handleAddToCart(product) {
-    addToCart(product, 1)
-    toast.success('Đã thêm vào giỏ hàng!', { icon: '🛒', duration: 2500 })
+  async function handleAddToCart(product) {
+    const ok = await addToCart(product, 1)
+    if (ok !== false) toast.success('Đã thêm vào giỏ hàng!', { icon: '🛒', duration: 2500 })
   }
 
-  function handleToggleWishlist(product) {
+  async function handleToggleWishlist(product) {
     const saved = wishlistItems.some(i => i.id === product.id)
     if (saved) {
       removeFromWishlist(product.id)
       toast('Đã xóa khỏi yêu thích', { icon: '💔', duration: 2000 })
     } else {
-      addToWishlist(product)
-      toast.success('Đã thêm vào yêu thích!', { duration: 2000 })
+      const ok = await addToWishlist(product)
+      if (ok !== false) toast.success('Đã thêm vào yêu thích!', { duration: 2000 })
     }
   }
 

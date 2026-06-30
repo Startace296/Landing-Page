@@ -7,10 +7,9 @@ const fmt = n =>
 export default function Wishlist({ isOpen, onClose, onOpenCart }) {
   const { wishlistItems, removeFromWishlist, addToCart, cartItems } = useCart()
 
-  function handleAddToCart(item) {
-    addToCart(item, 1)
-    onOpenCart?.()
-    onClose()
+  async function handleAddToCart(item) {
+    const ok = await addToCart(item, 1)
+    if (ok !== false) { onOpenCart?.(); onClose() }
   }
 
   return (
